@@ -37,7 +37,6 @@ def open_q3d():
 def close_q3d(q):
     q.release_desktop(close_projects=True, close_desktop=True)
     
-
 def define_gates_4dot():
     objects_dict = {}
     
@@ -375,10 +374,10 @@ def plot_results(gate_list,rel_cap_list):
     plt.ylim(bottom=0)
     
 def run_sequence(q,layer='top'):
-    N_x,N_y,N_r = 20,20,2
+    N_x,N_y,N_r = 10,10,7
     pos_x_list = np.linspace(-0.35,-0.18,N_x)
     pos_y_list = np.linspace(-0.09,0.06,N_y)
-    radius_list = np.linspace(0.02,0.03,N_r)
+    radius_list = np.linspace(0.04,0.1,N_r)
     
     rad_dict = {}
     
@@ -682,7 +681,6 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
             min_xy_arr = np.array(min_xy_list)
             rad_arr = np.array(rad_list)
             
-            print(layer)
             best_rad_idx = np.argmin(min_cost_arr)
             
             plt.figure("Expected Radius")
@@ -769,36 +767,33 @@ def plot_best_dot_on_layout(results_dict):
 def main():
     q = open_q3d()
     
+    gate_model = define_gates()
+
+    make_gates(q,gate_model)
+    
+    make_substrate(q)
+    
+    run_sequence(q,layer='bot')
+    
     close_q3d(q)
     
 #%%
-q = open_q3d()
-### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
-# %%
-gate_model = define_gates()
+# q = open_q3d()
+# ### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
+# # %%
+# gate_model = define_gates()
 
-make_gates(q,gate_model)
-#%%
-make_substrate(q)
-# make_dot(q,[-0.29,-0.02],0.05,layer='top')
-#%%
-run_sequence(q,layer='top')
-#%%
-results = load_results()
-results = interpolate_results(results)
-#%%
-plt.close('all')
-plot_results_dict(results,max_cost_cut = 1,contours = True,plot_relcap = False)
-#%%
-plt.close('all')
-plot_best_dot_on_layout(results)
-#%%
-Cap_props = {"MaxPass":15}
-test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
-#%%
-test.__dict__
-#%%
-close_q3d(q)
+# make_gates(q,gate_model)
+# #%%
+# make_substrate(q)
+# # make_dot(q,[-0.29,-0.02],0.05,layer='top')
+# #%%
+# run_sequence(q,layer='bot')
+# #%%
+# results = load_results()
+# results = interpolate_results(results)
+# #%%
+# close_q3d(q)
 
 
 #%%
