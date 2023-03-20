@@ -424,7 +424,16 @@ def run_sequence(q,layer='top',save_file = None):
                         clear_analysis(q)
                         gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
                     except:
-                        input("Didn't work. Maybe connection to licence server lost. Try again! \n[Press Any Button]")
+                        
+                        rad_dict['SL'] = SL_array
+                        rad_dict['BL'] = BL_array
+                        rad_dict['SSL'] = SSL_array
+                        rad_dict['BLU'] = BLU_array
+                        rad_dict['BLD'] = BLD_array
+                        
+                        rad_dict['X'] = X_pos
+                        rad_dict['Y'] = Y_pos
+                        rad_dict['rad'] = rad
                         
                         current_dir = os.path.dirname(os.path.realpath(__file__))
                         target_dir = current_dir+"\\FEM_results_2"
@@ -435,6 +444,7 @@ def run_sequence(q,layer='top',save_file = None):
                         with open(name, 'wb') as f:
                             pickle.dump(rad_dict, f)
                         
+                        input("Didn't work. Maybe connection to licence server lost. Try again! \n[Press Any Button]")
                         
                         make_substrate(q)
                         make_dot(q,[pos_x,pos_y],rad,layer=layer)
@@ -447,6 +457,12 @@ def run_sequence(q,layer='top',save_file = None):
                     SSL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SSL')]
                     BLU_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLU')]
                     BLD_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLD')]
+                    
+
+                    
+                else:
+                    
+                    print(f"Skipping x {pos_x}, y {pos_y}")
                 
                 
         rad_dict['SL'] = SL_array
@@ -819,7 +835,7 @@ make_gates(q,gate_model)
 # make_substrate(q)
 # make_dot(q,[-0.29,-0.02],0.05,layer='top')
 #%%
-run_sequence(q,layer='bot',save_file = None)
+run_sequence(q,layer='bot',save_file = "dotRadius_0.04_bot_relCapList_1679339831.pkl")
 #%%
 results = load_results()
 results = interpolate_results(results)
