@@ -373,50 +373,80 @@ def plot_results(gate_list,rel_cap_list):
     plt.xticks(range(len(gate_list)),gate_list)
     plt.ylim(bottom=0)
     
-def run_sequence(q,layer='top'):
+def run_sequence(q,layer='top',save_file = None):
     N_x,N_y,N_r = 10,10,7
     pos_x_list = np.linspace(-0.35,-0.18,N_x)
     pos_y_list = np.linspace(-0.09,0.06,N_y)
     radius_list = np.linspace(0.04,0.1,N_r)
     
-    rad_dict = {}
-    
+
     for idx_rad, rad in enumerate(radius_list):
         
-        X_pos = np.empty((N_x,N_y))
-        Y_pos = np.empty(np.shape(X_pos))
+        random_number = 2321.1231288
+        if save_file == None:
+            rad_dict = {}
+            
+            X_pos = random_number*np.ones((N_x,N_y))
+            Y_pos = random_number*np.ones(np.shape(X_pos))
+            
+            SL_array = np.empty(np.shape(X_pos))
+            BL_array = np.empty(np.shape(X_pos))
+            SSL_array = np.empty(np.shape(X_pos))
+            BLU_array = np.empty(np.shape(X_pos))
+            BLD_array = np.empty(np.shape(X_pos))
+            
+        else:
+            with open(save_file, "rb") as input_file:
+                rad_dict = pickle.load(input_file)
+            
+            X_pos = rad_dict['X']
+            Y_pos = rad_dict['Y']
+            
+            SL_array = rad_dict['SL']
+            BL_array = rad_dict['BL']
+            SSL_array = rad_dict['SSL']
+            BLU_array = rad_dict['BLU']
+            BLD_array = rad_dict['BLD']
         
-        SL_array = np.empty(np.shape(X_pos))
-        BL_array = np.empty(np.shape(X_pos))
-        SSL_array = np.empty(np.shape(X_pos))
-        BLU_array = np.empty(np.shape(X_pos))
-        BLD_array = np.empty(np.shape(X_pos))
-        
+
         for idx_x, pos_x in enumerate(pos_x_list):
             for idx_y, pos_y in enumerate(pos_y_list):    
-                                         
-                X_pos[idx_x,idx_y] = pos_x
-                Y_pos[idx_x,idx_y] = pos_y
                 
-                try:
-                    make_substrate(q)
-                    make_dot(q,[pos_x,pos_y],rad,layer=layer)
-                    result = analyse(q,SaveFields=False)
-                    clear_analysis(q)
-                    gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
-                except:
-                    input("Didn't work. Maybe connection to licence server lost. Try again! \n[Press Any Button]")
-                    make_substrate(q)
-                    make_dot(q,[pos_x,pos_y],rad,layer=layer)
-                    result = analyse(q,SaveFields=False)
-                    clear_analysis(q)
-                    gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
-                
-                SL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SL')]
-                BL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BL')]
-                SSL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SSL')]
-                BLU_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLU')]
-                BLD_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLD')]
+                if X_pos[idx_x,idx_y] == random_number and Y_pos[idx_x,idx_y] == random_number:
+                    
+                    X_pos[idx_x,idx_y] = pos_x
+                    Y_pos[idx_x,idx_y] = pos_y
+                    
+                    try:
+                        make_substrate(q)
+                        make_dot(q,[pos_x,pos_y],rad,layer=layer)
+                        result = analyse(q,SaveFields=False)
+                        clear_analysis(q)
+                        gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
+                    except:
+                        input("Didn't work. Maybe connection to licence server lost. Try again! \n[Press Any Button]")
+                        
+                        current_dir = os.path.dirname(os.path.realpath(__file__))
+                        target_dir = current_dir+"\\FEM_results_2"
+                        name = f"dotRadius_{rad}_{layer}_relCapList_{str(int(time.time()))}.pkl"
+                        
+                        os.chdir(target_dir)
+    
+                        with open(name, 'wb') as f:
+                            pickle.dump(rad_dict, f)
+                        
+                        
+                        make_substrate(q)
+                        make_dot(q,[pos_x,pos_y],rad,layer=layer)
+                        result = analyse(q,SaveFields=False)
+                        clear_analysis(q)
+                        gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
+                    
+                    SL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SL')]
+                    BL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BL')]
+                    SSL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SSL')]
+                    BLU_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLU')]
+                    BLD_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BLD')]
                 
                 
         rad_dict['SL'] = SL_array
@@ -767,33 +797,46 @@ def plot_best_dot_on_layout(results_dict):
 def main():
     q = open_q3d()
     
-    gate_model = define_gates()
-
-    make_gates(q,gate_model)
+    try:
+        gate_model = define_gates()
     
-    make_substrate(q)
-    
-    run_sequence(q,layer='bot')
-    
-    close_q3d(q)
+        make_gates(q,gate_model)
+        
+        run_sequence(q,layer='top')
+        
+        close_q3d(q)
+    except:
+        close_q3d(q)
     
 #%%
-# q = open_q3d()
-# ### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
-# # %%
-# gate_model = define_gates()
+q = open_q3d()
+### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
+# %%
+gate_model = define_gates()
 
-# make_gates(q,gate_model)
-# #%%
+make_gates(q,gate_model)
+#%%
 # make_substrate(q)
-# # make_dot(q,[-0.29,-0.02],0.05,layer='top')
-# #%%
-# run_sequence(q,layer='bot')
-# #%%
-# results = load_results()
-# results = interpolate_results(results)
-# #%%
-# close_q3d(q)
+# make_dot(q,[-0.29,-0.02],0.05,layer='top')
+#%%
+run_sequence(q,layer='bot',save_file = None)
+#%%
+results = load_results()
+results = interpolate_results(results)
+#%%
+plt.close('all')
+plot_results_dict(results,max_cost_cut = 1,contours = True,plot_relcap = False)
+#%%
+plt.close('all')
+plot_best_dot_on_layout(results)
+#%%
+Cap_props = {"MaxPass":15}
+test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
+#%%
+test.__dict__
+#%%
+close_q3d(q)
+
 
 
 #%%
