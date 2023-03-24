@@ -374,16 +374,17 @@ def plot_results(gate_list,rel_cap_list):
     plt.ylim(bottom=0)
     
 def run_sequence(q,layer='top',save_file = None):
-    N_x,N_y,N_r = 10,10,7
+    N_x,N_y,N_r = 15,15,1
     pos_x_list = np.linspace(-0.35,-0.18,N_x)
     pos_y_list = np.linspace(-0.09,0.06,N_y)
-    radius_list = np.linspace(0.04,0.1,N_r)
+    radius_list = np.linspace(0.03,0.03,N_r)
     
+    first = True 
 
     for idx_rad, rad in enumerate(radius_list):
         
         random_number = 2321.1231288
-        if save_file == None:
+        if (save_file == None) or (not first):
             rad_dict = {}
             
             X_pos = random_number*np.ones((N_x,N_y))
@@ -396,6 +397,10 @@ def run_sequence(q,layer='top',save_file = None):
             BLD_array = np.empty(np.shape(X_pos))
             
         else:
+            current_dir = os.path.dirname(os.path.realpath(__file__))
+            target_dir = current_dir+"\\FEM_results_2"
+            
+            os.chdir(target_dir)
             with open(save_file, "rb") as input_file:
                 rad_dict = pickle.load(input_file)
             
@@ -408,21 +413,22 @@ def run_sequence(q,layer='top',save_file = None):
             BLU_array = rad_dict['BLU']
             BLD_array = rad_dict['BLD']
         
+        first = False
 
         for idx_x, pos_x in enumerate(pos_x_list):
             for idx_y, pos_y in enumerate(pos_y_list):    
                 
                 if X_pos[idx_x,idx_y] == random_number and Y_pos[idx_x,idx_y] == random_number:
-                    
-                    X_pos[idx_x,idx_y] = pos_x
-                    Y_pos[idx_x,idx_y] = pos_y
-                    
+                                       
                     try:
                         make_substrate(q)
                         make_dot(q,[pos_x,pos_y],rad,layer=layer)
                         result = analyse(q,SaveFields=False)
                         clear_analysis(q)
                         gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
+                        
+                        X_pos[idx_x,idx_y] = pos_x
+                        Y_pos[idx_x,idx_y] = pos_y
                     except:
                         
                         rad_dict['SL'] = SL_array
@@ -451,6 +457,9 @@ def run_sequence(q,layer='top',save_file = None):
                         result = analyse(q,SaveFields=False)
                         clear_analysis(q)
                         gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
+                        
+                        X_pos[idx_x,idx_y] = pos_x
+                        Y_pos[idx_x,idx_y] = pos_y
                     
                     SL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('SL')]
                     BL_array[idx_x,idx_y] = abs_cap_list[gate_list.index('BL')]
@@ -540,7 +549,7 @@ def interpolate_results(results_dict,N_x=100,N_y=100):
         
     return results_dict
 
-def plot_layout(plot_name="Expected position",image_name="design_screenshot.png",x_offset=0,y_offset=0):
+def plot_layout(plot_name="Expected position",image_name="design_screenshot_colored.png",x_offset=0,y_offset=0):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     os.chdir(current_dir)
     
@@ -548,7 +557,15 @@ def plot_layout(plot_name="Expected position",image_name="design_screenshot.png"
     img = mpimg.imread(image_name)
     
     fig = plt.figure(plot_name)
-    plt.imshow(img,extent=[(-0.6-x_offset)*1000,(-0.113-x_offset)*1000,(-0.185-y_offset)*1000,(0.157-y_offset)*1000])
+    # x = [(-0.6-x_offset)*1000,(-0.113-x_offset)*1000]
+    # y = [(-0.185-y_offset)*1000,(0.157-y_offset)*1000]
+    # plt.imshow(img,extent=[x[0],x[1],y[0],y[1]])
+    
+    # #Turned image: 
+    x = [(-0.6318-x_offset)*1000,(-0.07-x_offset)*1000]
+    y = [(-0.3-y_offset)*1000,(0.275-y_offset)*1000]
+    plt.imshow(img,extent=[y[1],y[0],x[0],x[1]])
+    
     return fig
 
 def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relcap = True):
@@ -796,17 +813,21 @@ def plot_best_dot_on_layout(results_dict):
     
         X = (results_dict[layer][str(rad/1000)]['X']-x_offset)*1000
         Y = (results_dict[layer][str(rad/1000)]['Y']-y_offset)*1000
-        min_xy = (np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx])
+        
+        # min_xy = (np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx])
+        #Turned
+        min_xy = (np.ndarray.flatten(Y)[min_idx],np.ndarray.flatten(X)[min_idx])
         
         plt.plot(min_xy[0],min_xy[1],'x',markersize=8,color = all_goal_colors[layer_dot_dict[layer]])
+        circle = plt.Circle(min_xy, rad, color=all_goal_colors[layer_dot_dict[layer]],alpha=0.5)
         
-        circle = plt.Circle(min_xy, rad, color=all_goal_colors[layer_dot_dict[layer]],alpha=0.2)
+        
         ax = fig.gca() 
         ax.add_patch(circle)
     plt.ylabel("y-position ")
     plt.xlabel("x-position ")
             
-
+    plt.savefig('simulated_position_PLACEHOLDER.pdf', transparent=True, dpi=300)
     
     
     
@@ -835,13 +856,13 @@ make_gates(q,gate_model)
 # make_substrate(q)
 # make_dot(q,[-0.29,-0.02],0.05,layer='top')
 #%%
-run_sequence(q,layer='bot',save_file = "dotRadius_0.04_bot_relCapList_1679339831.pkl")
+run_sequence(q,layer='top',save_file = "dotRadius_0.03_top_relCapList_1679696283.pkl")
 #%%
 results = load_results()
 results = interpolate_results(results)
 #%%
 plt.close('all')
-plot_results_dict(results,max_cost_cut = 1,contours = True,plot_relcap = False)
+plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = False)
 #%%
 plt.close('all')
 plot_best_dot_on_layout(results)
