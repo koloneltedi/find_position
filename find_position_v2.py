@@ -367,11 +367,11 @@ def plot_results(gate_list,rel_cap_list):
     plt.xticks(range(len(gate_list)),gate_list)
     plt.ylim(bottom=0)
     
-def run_sequence(q):
-    N_x,N_y,N_r = 10,10,3
+def run_sequence(q,layer='top'):
+    N_x,N_y,N_r = 10,10,2
     pos_x_list = np.linspace(-0.35,-0.18,N_x)
     pos_y_list = np.linspace(-0.09,0.06,N_y)
-    radius_list = np.linspace(0.03,0.07,N_r)
+    radius_list = np.linspace(0.07,0.09,N_r)
     
     rad_dict = {}
     
@@ -394,14 +394,14 @@ def run_sequence(q):
                 
                 try:
                     make_substrate(q)
-                    make_dot(q,[pos_x,pos_y],rad,layer='top')
+                    make_dot(q,[pos_x,pos_y],rad,layer=layer)
                     result = analyse(q,SaveFields=False)
                     clear_analysis(q)
                     gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
                 except:
                     input("Didn't work. Maybe connection to licence server lost. Try again! \n[Press Any Button]")
                     make_substrate(q)
-                    make_dot(q,[pos_x,pos_y],rad,layer='top')
+                    make_dot(q,[pos_x,pos_y],rad,layer=layer)
                     result = analyse(q,SaveFields=False)
                     clear_analysis(q)
                     gate_list,rel_cap_list,abs_cap_list = post_process_result(result)
@@ -425,7 +425,7 @@ def run_sequence(q):
         
         current_dir = os.path.dirname(os.path.realpath(__file__))
         target_dir = current_dir+"\\FEM_results_2"
-        name = f"dotRadius_{rad}_relCapList_{str(int(time.time()))}.pkl"
+        name = f"dotRadius_{rad}_{layer}_relCapList_{str(int(time.time()))}.pkl"
         
         os.chdir(target_dir)
 
@@ -502,6 +502,19 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
     all_goals["dot2"] = {'BL':0.55,'SSL':0.73,'BLU':0.54,'BLD':0.61} # dot2
     
     all_goal_colors = {"dot1":'blue',"dot1 displaced":'green',"dot2":'orange'}
+    
+    interdot_slopes = {'BL':-4.8,'SSL':-4.3,'BLU':-3.7,'BLD':-6.4}
+    
+    interdot_ratio = {}
+    mean_interdot = []
+    for key in interdot_slopes.keys():
+        tmp = (1+all_goals["dot1"][key]*interdot_slopes[key])/(1+all_goals["dot2"][key]*interdot_slopes[key])
+        interdot_ratio[key] = tmp
+        mean_interdot.append(tmp)
+    
+    mean_interdot = np.mean(mean_interdot)
+    print(interdot_ratio)
+    print(mean_interdot)
     
     plot_layout()
     
@@ -622,7 +635,7 @@ make_gates(q,gate_model)
 # make_substrate(q)
 # make_dot(q,[-0.29,-0.02],0.05,layer='top')
 #%%
-run_sequence(q)
+run_sequence(q,layer='bot')
 #%%
 results = load_results()
 results = interpolate_results(results)

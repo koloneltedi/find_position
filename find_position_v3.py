@@ -845,34 +845,34 @@ def main():
     except:
         close_q3d(q)
     
-#%%
-q = open_q3d()
-### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
-# %%
-gate_model = define_gates()
+# #%%
+# q = open_q3d()
+# ### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
+# # %%
+# gate_model = define_gates()
 
-make_gates(q,gate_model)
-#%%
-# make_substrate(q)
-# make_dot(q,[-0.29,-0.02],0.05,layer='top')
-#%%
-run_sequence(q,layer='top',save_file = "dotRadius_0.03_top_relCapList_1679696283.pkl")
-#%%
-results = load_results()
-results = interpolate_results(results)
-#%%
-plt.close('all')
-plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = False)
-#%%
-plt.close('all')
-plot_best_dot_on_layout(results)
-#%%
-Cap_props = {"MaxPass":15}
-test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
-#%%
-test.__dict__
-#%%
-close_q3d(q)
+# make_gates(q,gate_model)
+# #%%
+# # make_substrate(q)
+# # make_dot(q,[-0.29,-0.02],0.05,layer='top')
+# #%%
+# run_sequence(q,layer='bot',save_file = None)
+# #%%
+# results = load_results()
+# results = interpolate_results(results)
+# #%%
+# plt.close('all')
+# plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = False)
+# #%%
+# plt.close('all')
+# plot_best_dot_on_layout(results)
+# #%%
+# Cap_props = {"MaxPass":15}
+# test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
+# #%%
+# test.__dict__
+# #%%
+# close_q3d(q)
 
 
 
