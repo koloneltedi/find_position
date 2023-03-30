@@ -25,7 +25,13 @@ from collections import OrderedDict
 
 
 def open_q3d():
-    non_graphical = os.getenv("PYAEDT_NON_GRAPHICAL", "False").lower() in ("true", "1", "t")
+    ### Opens up Ansys with a Graphical Interface
+    ### If you don't want it graphical, set the string to True
+    ### Make sure to be connected with the licence server (e.g. with eduVPN)
+    ### Choses random project name
+    
+    graphical_bool_str = 'False'
+    non_graphical = os.getenv("PYAEDT_NON_GRAPHICAL", graphical_bool_str).lower() in ("true", "1", "t")
     
     q = pyaedt.Q3d(projectname=pyaedt.generate_unique_project_name(),
                    specified_version="2022.2",
@@ -103,7 +109,7 @@ def define_gates_4dot():
     return objects_dict
 
 def define_gates():
-    objects_dict = {}
+    objects_dict = {} ### Contains all gates
     
     SL_dict = {}
     SL_dict['height'] = 40*1e-3 ## in um
@@ -375,9 +381,9 @@ def plot_results(gate_list,rel_cap_list):
     
 def run_sequence(q,layer='top',save_file = None):
     N_x,N_y,N_r = 15,15,1
-    pos_x_list = np.linspace(-0.35,-0.18,N_x)
-    pos_y_list = np.linspace(-0.09,0.06,N_y)
-    radius_list = np.linspace(0.03,0.03,N_r)
+    pos_x_list = np.linspace(-0.35,-0.18,N_x) #um
+    pos_y_list = np.linspace(-0.09,0.06,N_y) #um
+    radius_list = np.linspace(0.03,0.03,N_r) #um
     
     first = True 
 
@@ -515,7 +521,6 @@ def load_results():
 
     
     return results_dict
-
 
 def interpolate_results(results_dict,N_x=100,N_y=100):
     from scipy.interpolate import RegularGridInterpolator as interpolator
@@ -828,8 +833,7 @@ def plot_best_dot_on_layout(results_dict):
     plt.xlabel("x-position ")
             
     plt.savefig('simulated_position_PLACEHOLDER.pdf', transparent=True, dpi=300)
-    
-    
+     
     
 def main():
     q = open_q3d()
@@ -845,34 +849,34 @@ def main():
     except:
         close_q3d(q)
     
-# #%%
-# q = open_q3d()
-# ### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
-# # %%
-# gate_model = define_gates()
+#%%
+q = open_q3d()
+### MAKE SURE TO MANUALLY MAKE um THE DEFAULT LENGTH UNIT!!!!
+# %%
+gate_model = define_gates()
 
-# make_gates(q,gate_model)
-# #%%
-# # make_substrate(q)
-# # make_dot(q,[-0.29,-0.02],0.05,layer='top')
-# #%%
-# run_sequence(q,layer='bot',save_file = None)
-# #%%
-# results = load_results()
-# results = interpolate_results(results)
-# #%%
-# plt.close('all')
-# plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = False)
-# #%%
-# plt.close('all')
-# plot_best_dot_on_layout(results)
-# #%%
-# Cap_props = {"MaxPass":15}
-# test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
-# #%%
-# test.__dict__
-# #%%
-# close_q3d(q)
+make_gates(q,gate_model)
+#%%
+# make_substrate(q)
+# make_dot(q,[-0.29,-0.02],0.05,layer='top')
+#%%
+run_sequence(q,layer='bot',save_file = None)
+#%%
+results = load_results()
+results = interpolate_results(results)
+#%%
+plt.close('all')
+plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = False)
+#%%
+plt.close('all')
+plot_best_dot_on_layout(results)
+#%%
+Cap_props = {"MaxPass":15}
+test = q.create_setup(setupname = 'MySetup' , props={'Cap':Cap_props,"AdaptiveFreq": "1MHz", "SaveFields": True, "DC": False, "AC": False})
+#%%
+test.__dict__
+#%%
+close_q3d(q)
 
 
 

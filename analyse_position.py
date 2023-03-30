@@ -14,6 +14,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 
+import matplotlib.collections as mcoll
+import matplotlib.path as mpath
+
 import matplotlib as mpl
 
 import find_position_v3 as find_pos
@@ -89,7 +92,7 @@ def interpolate_results(results_dict,N_x=100,N_y=100):
         
     return results_dict
 
-def plot_layout(plot_name="Expected position",image_name="design_screenshot_colored.png",x_offset=0,y_offset=0):
+def plot_layout(plot_name="Expected position",image_name="design_screenshot_colored_clean.png",x_offset=0,y_offset=0):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     os.chdir(current_dir)
     
@@ -139,7 +142,7 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
     all_goal_colors = {"dot1":'blue',"dot1 displaced":'green',"dot2":'orange'}
     all_goal_labels = {"dot1":'Dot 1',"dot1 displaced":'Dot 1 (displaced)',"dot2":'Dot 2'}
     
-    layer_marker_shape = {"top":"o","bot":"s"}
+    layer_marker_shape = {"top":"o","bot":"v"}
     layer_line_shape = {"top":"--","bot":"-"}
     layer_label = {"top":"top well","bot":"bottom well"}
     
@@ -172,7 +175,11 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
             min_cost_list = []
             std_min_cost_list = []
             min_xy_list = []
+            min_yx_list = []
             rad_list = []
+            close_to_min_list = []
+            cost_list = []
+            std_list = []
             
             for key in results_dict[layer].keys():
                 radius = float(key)
@@ -274,7 +281,14 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
                 min_cost_list.append(min_cost)
                 std_min_cost_list.append(std_min_cost)
                 min_xy = [np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx]]
+                min_yx = [np.ndarray.flatten(Y)[min_idx],np.ndarray.flatten(X)[min_idx]]
                 min_xy_list.append(min_xy)
+                min_yx_list.append(min_yx)
+                
+
+                
+                cost_list.append(cost)
+                std_list.append(std_cost)
                 
                 
             min_idx_arr = np.array(min_idx_list)
@@ -282,13 +296,18 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
             std_min_cost_arr = np.array(std_min_cost_list)
             
             min_xy_arr = np.array(min_xy_list)
+            min_yx_arr = np.array(min_yx_list)
             rad_arr = np.array(rad_list)
             
             best_rad_idx = np.argmin(min_cost_arr)
             
             plt.figure("Expected Radius")
             # plt.plot(rad_arr,min_cost_arr,layer_marker_shape[layer]+layer_line_shape[layer],color = all_goal_colors[goal_key],label=all_goal_labels[goal_key]+" "+layer_label[layer])
-            plt.errorbar(rad_arr,min_cost_arr,std_min_cost_arr,fmt = layer_marker_shape[layer]+layer_line_shape[layer],color = all_goal_colors[goal_key],label=all_goal_labels[goal_key]+" "+layer_label[layer],capsize = 5)
+            # segments = make_segments(rad_arr, min_cost_arr)
+            
+            # plt.errorbar(rad_arr,min_cost_arr,std_min_cost_arr,fmt = layer_marker_shape[layer]+layer_line_shape[layer],color = all_goal_colors[goal_key],label=all_goal_labels[goal_key]+" "+layer_label[layer],capsize = 5)
+            color_errorbar(rad_arr,min_cost_arr,std_min_cost_arr,layer,goal_key)
+            
             plt.xlabel('Radius (nm)')
             plt.ylabel('Cost at best position')
             # plt.plot(rad_arr,min_cost_arr,layer_line_shape[layer],color = all_goal_colors[goal_key],label=all_goal_labels[goal_key]+" "+layer_label[layer])
@@ -300,13 +319,34 @@ def plot_results_dict(results_dict,max_cost_cut = 0.1,contours = True,plot_relca
             # plt.show()
             
             plt.figure("Expected position")
-            plt.plot(min_xy_arr[:,0],min_xy_arr[:,1],'o-',color = all_goal_colors[goal_key],label=goal_key)
-            plt.plot(min_xy_arr[best_rad_idx,0],min_xy_arr[best_rad_idx,1],'*',markersize=12,color = all_goal_colors[goal_key])
+            # plt.plot(min_xy_arr[:,0],min_xy_arr[:,1],'o-',color = all_goal_colors[goal_key],label=goal_key)
+            # plt.plot(min_xy_arr[best_rad_idx,0],min_xy_arr[best_rad_idx,1],'*',markersize=12,color = all_goal_colors[goal_key])
+            # plt.plot(min_yx_arr[:,0],min_yx_arr[:,1],'o-',color = all_goal_colors[goal_key],label=goal_key)
+            color_lineplot(min_yx_arr[:,0],min_yx_arr[:,1],layer,goal_key,best_rad_idx)
+            
+            # plt.plot(min_yx_arr[best_rad_idx,0],min_yx_arr[best_rad_idx,1],'*',markersize=12,color = all_goal_colors[goal_key])
+            
+            
             # plt.xlim([np.min(X),np.max(X)])
             # plt.ylim([np.min(Y), np.max(Y)])
+            plt.xlim([100,-100])
+            plt.ylim([-100,100])
+            plt.xlabel("x position (nm)")
+            plt.ylabel("y position (nm)")
             
+            best_cost = min_cost_arr[best_rad_idx]
+            best_cost_std = std_min_cost_arr[best_rad_idx]
             
-            layer_best[layer][goal_key] = {'rad': rad_arr[best_rad_idx],'xy_idx': min_idx_arr[best_rad_idx]}
+
+            close_to_min = np.zeros(np.shape(cost_list[0]))
+            rad_keys = results_dict[layer].keys()
+            for idx, rad in enumerate(rad_keys):
+                total_std_from_min = (std_list[idx]**2+best_cost_std**2)**0.5
+                
+                close_to_min += np.abs(cost_list[idx]-best_cost)<total_std_from_min   
+                close_to_min = close_to_min>0.1
+            
+            layer_best[layer][goal_key] = {'rad': rad_arr[best_rad_idx],'xy_idx': min_idx_arr[best_rad_idx],'close':close_to_min}
             
             plt.legend()
     plt.show()
@@ -317,6 +357,7 @@ def plot_best_dot_on_layout(results_dict):
     plt.close('all')
     
     all_goal_colors = {"dot1":'blue',"dot1 displaced":'green',"dot2":'orange'}
+    all_goal_cmaps = {"dot1":'Blues',"dot1 displaced":'green',"dot2":'Oranges'}
     
     x_offset = -0.252 #um
     y_offset = -0.014 #um
@@ -333,12 +374,24 @@ def plot_best_dot_on_layout(results_dict):
             X = (results_dict[layer][str(rad/1000)]['X']-x_offset)*1000
             Y = (results_dict[layer][str(rad/1000)]['Y']-y_offset)*1000
             min_xy = (np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx])
+            min_yx = (np.ndarray.flatten(Y)[min_idx],np.ndarray.flatten(X)[min_idx])
             
-            plt.plot(min_xy[0],min_xy[1],'x',markersize=8,color = all_goal_colors[dot])
+            # plt.plot(min_xy[0],min_xy[1],'x',markersize=8,color = all_goal_colors[dot])
+            # circle = plt.Circle(min_xy, rad, color=all_goal_colors[dot],alpha=0.2)
             
-            circle = plt.Circle(min_xy, rad, color=all_goal_colors[dot],alpha=0.2)
+            plt.plot(min_yx[0],min_yx[1],'x',markersize=8,color = all_goal_colors[dot])
+            
+            close_to_min = layer_best[layer][dot]['close']
+            plt.pcolor(Y, X, close_to_min, shading='auto',alpha=0.5*close_to_min,cmap=mpl.colormaps[all_goal_cmaps[dot]],rasterized =True)
+            
+            
             ax = fig.gca() 
-            ax.add_patch(circle)
+            
+            # circle = plt.Circle(min_yx, rad, color=all_goal_colors[dot],alpha=0.5)
+            # ax.add_patch(circle)
+            
+        plt.xlim([100,-100])
+        plt.ylim([-120,80])
         plt.ylabel("y-position ")
         plt.xlabel("x-position ")
             
@@ -354,16 +407,24 @@ def plot_best_dot_on_layout(results_dict):
         X = (results_dict[layer][str(rad/1000)]['X']-x_offset)*1000
         Y = (results_dict[layer][str(rad/1000)]['Y']-y_offset)*1000
         
-        # min_xy = (np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx])
+        min_xy = (np.ndarray.flatten(X)[min_idx],np.ndarray.flatten(Y)[min_idx])
         #Turned
-        min_xy = (np.ndarray.flatten(Y)[min_idx],np.ndarray.flatten(X)[min_idx])
+        min_yx = (np.ndarray.flatten(Y)[min_idx],np.ndarray.flatten(X)[min_idx])
         
-        plt.plot(min_xy[0],min_xy[1],'x',markersize=8,color = all_goal_colors[layer_dot_dict[layer]])
-        circle = plt.Circle(min_xy, rad, color=all_goal_colors[layer_dot_dict[layer]],alpha=0.5)
-        
+        # plt.plot(min_xy[0],min_xy[1],'x',markersize=8,color = all_goal_colors[layer_dot_dict[layer]])
+        # circle = plt.Circle(min_xy, rad, color=all_goal_colors[layer_dot_dict[layer]],alpha=0.5)
+        plt.plot(min_yx[0],min_yx[1],'x',markersize=8,color = all_goal_colors[layer_dot_dict[layer]])
+
+        close_to_min = layer_best[layer][layer_dot_dict[layer]]['close']
+        plt.pcolor(Y, X, close_to_min, shading='auto',alpha=0.5*close_to_min,cmap=mpl.colormaps[all_goal_cmaps[layer_dot_dict[layer]]],rasterized =True)
+            
         
         ax = fig.gca() 
-        ax.add_patch(circle)
+        # circle = plt.Circle(min_yx, rad, color=all_goal_colors[layer_dot_dict[layer]],alpha=0.5)
+        # ax.add_patch(circle)
+        
+        plt.xlim([100,-100])
+        plt.ylim([-120,80])
     plt.ylabel("y-position ")
     plt.xlabel("x-position ")
             
@@ -425,6 +486,93 @@ def rerun_sim(save_file, idx_x, idx_y):
     with open(name, 'wb') as f:
         pickle.dump(rad_dict, f)
 
+def fake_legend(markerstyle,linestyle,color,label):
+    plt.plot(100,100,markerstyle+linestyle,color = color,label=label)
+
+def color_lineplot(x,y,layer,dot,best_rad_idx):
+    layer_marker_shape = {"top":"o","bot":"v"}
+    layer_line_shape = {"top":"--","bot":"-"}
+    layer_label = {"top":"Top well","bot":"Bottom well"}
+    dot_colormap = {"dot1":'Blues',"dot2":'Oranges'}
+    dot_labels = {"dot1":'dot 1',"dot2":'dot 2'}
+    
+    z_marker = np.linspace(0.3, 0.7, len(x))
+    
+    for i in range(len(x)):
+        plt.errorbar(x[i],y[i],fmt = layer_marker_shape[layer],color = plt.get_cmap(dot_colormap[dot])(z_marker[i]),capsize = 5)
+    
+    # plt.plot(x[best_rad_idx],y[best_rad_idx],'*',markersize=12,color = plt.get_cmap(dot_colormap[dot])(z_marker[best_rad_idx]))
+    # fake_legend(markerstyle = layer_marker_shape[layer],linestyle = layer_line_shape[layer],color=plt.get_cmap(dot_colormap[dot])(0.6),label = layer_label[layer]+dot_labels[dot])
+    
+    path = mpath.Path(np.column_stack([x, y]))
+    verts = path.interpolated(steps=3).vertices
+    x_line, y_line = verts[:, 0], verts[:, 1]
+    z_line = np.linspace(0.3, 0.7, len(x_line))
+    
+    colorline(x_line, y_line, z_line, cmap=plt.get_cmap(dot_colormap[dot]), linewidth=2,linestyle=layer_line_shape[layer])
+    
+
+def color_errorbar(x,y,y_err,layer,dot):
+    layer_marker_shape = {"top":"o","bot":"v"}
+    layer_line_shape = {"top":"--","bot":"-"}
+    layer_label = {"top":"Top well" ,"bot":"Bottom well "}
+    dot_colormap = {"dot1":'Blues',"dot2":'Oranges'}
+    dot_labels = {"dot1":'dot 1',"dot2":'dot 2'}
+    
+    z_marker = np.linspace(0.3, 0.7, len(x))
+    
+    for i in range(len(x)):
+        plt.errorbar(x[i],y[i],y_err[i],fmt = layer_marker_shape[layer],color = plt.get_cmap(dot_colormap[dot])(z_marker[i]),capsize = 5)
+    
+    fake_legend(markerstyle = layer_marker_shape[layer],linestyle = layer_line_shape[layer],color=plt.get_cmap(dot_colormap[dot])(0.6),label = layer_label[layer]+dot_labels[dot])
+    
+    path = mpath.Path(np.column_stack([x, y]))
+    verts = path.interpolated(steps=3).vertices
+    x_line, y_line = verts[:, 0], verts[:, 1]
+    z_line = np.linspace(0.3, 0.7, len(x_line))
+    
+    colorline(x_line, y_line, z_line, cmap=plt.get_cmap(dot_colormap[dot]), linewidth=2,linestyle=layer_line_shape[layer])
+    
+    plt.xlim(15,105)
+    plt.ylim(0,0.7)
+    
+
+def colorline(
+    x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
+        linewidth=3, alpha=1.0,linestyle='-'):
+    """
+    http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+    http://matplotlib.org/examples/pylab_examples/multicolored_line.html
+    Plot a colored line with coordinates x and y
+    Optionally specify colors in the array z
+    Optionally specify a colormap, a norm function and a line width
+    """
+
+    # Default colors equally spaced on [0,1]:
+    if z is None:
+        z = np.linspace(0.0, 1.0, len(x))
+
+    # Special case if a single number:
+    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+        z = np.array([z])
+
+    z = np.asarray(z)
+
+    segments = make_segments(x, y)
+    lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
+                              linewidth=linewidth, alpha=alpha,linestyle=linestyle)
+
+    ax = plt.gca()
+    ax.add_collection(lc)
+
+    return lc
+
+def make_segments(x,y):
+    # To make gradually changing color
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
+
     
 #%%    
 def main():
@@ -439,11 +587,24 @@ def main():
     
 if __name__=="__main__":
     main()
-    
+
+
+#%%
+results = load_results()
+results = interpolate_results(results)
+
+#%%
+
+plt.close('all')
+plot_results_dict(results,max_cost_cut = 1,contours = True,plot_relcap = False)
+
+#%%
+plt.close('all')
+plot_best_dot_on_layout(results)
 #%%
 results = load_results()
 plt.close('all')
 plot_results_dict(results,max_cost_cut = 1,contours = False,plot_relcap = True)
 
 #%%
-rerun_sim(save_file="dotRadius_0.09_bot_relCapList_1679613221.pkl",idx_x=1,idx_y=5)
+rerun_sim(save_file="dotRadius_0.1_top_relCapList_1679290661.pkl",idx_x=1,idx_y=1)
